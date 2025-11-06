@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Simulador de Movimiento Parabólico</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    body {
+      background: #000;
+      color: #111;
+    }
+
+    /* VIDEO DE FONDO MENÚ */
+    #bgVideo {
+      position: fixed;
+      right: 0;
+      bottom: 0;
+      min-width: 100%;
+      min-height: 100%;
+      z-index: -2;
+      object-fit: cover;
+    }
+    #menu {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      padding: 16px;
+      text-align: center;
+    }
+    #menuOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: -1;
+    }
+    .menu-content {
+      max-width: 420px;
+      width: 100%;
+    }
+    .menu-title {
+      font-size: 24px;
+      margin-bottom: 12px;
+    }
+    .menu-subtitle {
+      font-size: 14px;
+      margin-bottom: 24px;
+      color: #e0e0e0;
+    }
+    .menu-content button {
+      width: 100%;
+      padding: 16px 24px;
+      font-size: 20px;
+      border-radius: 40px;
+      border: 2px solid #00b4ff;
+      background: #000;
+      color: #fff;
+      cursor: pointer;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      transition: all 0.2s ease;
+    }
+    .menu-content button:hover {
+      background: #ffffff;
+      color: #000;
+      border-color: #ffffff;
+    }
+
+    /* SIMULADOR: MOBILE-FIRST */
+    #simulador {
+      display: none;
+      min-height: 100vh;
+      background: #ffffff;
+      color: #000000;
+      display: flex;
+      flex-direction: column; /* en móvil: panel arriba, canvas abajo */
+    }
+
+    /* PANEL IZQUIERDO (en desktop se verá a la izquierda) */
+    #panel {
+      width: 100%;
+      padding: 16px 16px 8px;
+      background: #f2f2f2;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+    #panel-header {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    #panel h2 {
+      margin: 0;
+      font-size: 20px;
+      color: #1565c0;
+    }
+    #panel p.subtitle {
+      margin: 0;
+      font-size: 13px;
+      color: #555555;
+    }
+
+    .fields-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 12px;
+      margin-top: 8px;
+    }
+    /* En pantallas muy pequeñas, una sola columna */
+    @media (max-width: 480px) {
+      .fields-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+    }
+    .field label {
+      font-size: 13px;
+      margin-bottom: 4px;
+      color: #000000;
+    }
+    .field input {
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 2px solid #1e88e5;
+      font-size: 14px;
+      outline: none;
+      width: 100%;
+    }
+    .field input:focus {
+      border-color: #1565c0;
+      box-shadow: 0 0 0 2px rgba(21, 101, 192, 0.15);
+    }
+
+    .buttons-panel {
+      display: flex;
+      flex-direction: row;
+      gap: 10px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      flex: 1;
+      min-width: 130px;
+      padding: 12px;
+      border-radius: 24px;
+      border: none;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      text-align: center;
+      color: #ffffff;
+      background: #1e88e5;
+      transition: background 0.2s ease, transform 0.05s ease;
+      touch-action: manipulation;
+    }
+    .btn:active {
+      transform: scale(0.98);
+    }
+    .btn:hover {
+      background: #1565c0;
+    }
+    .btn-secondary {
+      background: #424242;
+    }
+    .btn-secondary:hover {
+      background: #212121;
+    }
+
+    .info-box {
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #ffffff;
+      border: 1px solid #e0e0e0;
+      font-size: 13px;
+    }
+    .info-box h3 {
+      margin: 0 0 6px 0;
+      font-size: 15px;
+      color: #1565c0;
+    }
+    .info-box p {
+      margin: 2px 0;
+    }
+    .divider {
+      margin: 6px 0;
+      height: 1px;
+      background: #e0e0e0;
+    }
+    .hint {
+      color: #555555;
+      font-size: 12px;
+    }
+    .error {
+      color: #d32f2f;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    /* CONTENEDOR DEL CANVAS */
+    #canvasContainer {
+      flex: 1;
+      position: relative;
+      padding: 12px 16px 16px;
+      display: flex;
+      align-items: stretch;
+      justify-content: stretch;
+    }
+    #canvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 12px;
+      display: block;
+      background: #ffffff;
+    }
+
+    /* En móvil: altura fija del canvas para que se vea bien */
+    @media (max-width: 900px) {
+      #canvasContainer {
+        height: 60vh;
+        padding: 8px 12px 12px;
+      }
+    }
+
+    /* En pantallas grandes: layout en fila (panel + canvas) */
+    @media (min-width: 900px) {
+      #simulador {
+        flex-direction: row;
+      }
+      #panel {
+        width: 340px;
+        max-width: 380px;
+        padding: 24px;
+        box-shadow: 4px 0 15px rgba(0, 0, 0, 0.08);
+      }
+      #canvasContainer {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- VIDEO DE FONDO PARA EL MENÚ -->
+  <video id="bgVideo" autoplay muted loop playsinline>
+    <source src="Fondo.mp4" type="video/mp4" />
+    Tu navegador no soporta video HTML5.
+  </video>
+
+  <!-- MENÚ INICIAL -->
+  <div id="menu" aria-labelledby="menu-title">
+    <div id="menuOverlay"></div>
+    <div class="menu-content">
+      <div class="menu-title" id="menu-title">
+        Simulador de Movimiento Parabólico
+      </div>
+      <div class="menu-subtitle">
+        Explora la trayectoria de un proyectil con resistencia del aire y altura inicial.
+      </div>
+      <button id="startBtn">
+        INICIAR
+      </button>
+    </div>
+  </div>
+
+  <!-- SIMULADOR -->
+  <div id="simulador">
+    <!-- Panel -->
+    <section id="panel" aria-label="Parámetros y resultados del simulador">
+      <div id="panel-header">
+        <h2>Parámetros iniciales</h2>
+        <p class="subtitle">Ajusta los valores y observa la trayectoria</p>
+      </div>
+
+      <div class="fields-grid">
+        <div class="field">
+          <label for="v0">v0 (m/s)</label>
+          <input id="v0" type="number" inputmode="decimal" step="0.01" value="20" />
+        </div>
+
+        <div class="field">
+          <label for="theta">θ (grados)</label>
+          <input id="theta" type="number" inputmode="decimal" step="0.1" value="45" />
+        </div>
+
+        <div class="field">
+          <label for="g">g (m/s²)</label>
+          <input id="g" type="number" inputmode="decimal" step="0.01" value="9.81" />
+        </div>
+
+        <div class="field">
+          <label for="k">k (1/s)</label>
+          <input id="k" type="number" inputmode="decimal" step="0.001" value="0.05" />
+        </div>
+
+        <div class="field">
+          <label for="y0">y0 (m)</label>
+          <input id="y0" type="number" inputmode="decimal" step="0.01" value="2" />
+        </div>
+      </div>
+
+      <div class="buttons-panel">
+        <button id="btnSimular" class="btn" type="button">
+          Simular
+        </button>
+        <button id="btnAnimar" class="btn btn-secondary" type="button">
+          Animar / Pausa
+        </button>
+      </div>
+
+      <div class="info-box" aria-live="polite">
+        <h3>Resultados</h3>
+        <p id="resTiempo">T = 0.000 s (tiempo de vuelo)</p>
+        <p id="resAlcance">Alcance ≈ 0.000 m</p>
+        <p id="resAltura">Altura máxima ≈ 0.000 m</p>
+        <div class="divider"></div>
+        <p id="hint" class="hint">
+          Consejo: toca o pasa el cursor sobre un campo para ver su explicación.
+        </p>
+        <p id="error" class="error" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <!-- Canvas -->
+    <section id="canvasContainer" aria-label="Gráfica de la trayectoria del proyectil">
+      <canvas id="canvas"></canvas>
+    </section>
+  </div>
+
+  <script>
+    const MARGIN = 60;
+    const ANIM_SPEED = 1.0;
+
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    let plotRect = null;
+    let curvePoints = [];
+    let T = 0.0;
+    let alcance = 0.0;
+    let alturaMax = 0.0;
+    let animating = false;
+    let animT = 0.0;
+    let lastTime = 0;
+
+    const errorDiv = document.getElementById("error");
+    const hintDiv = document.getElementById("hint");
+    const resTiempo = document.getElementById("resTiempo");
+    const resAlcance = document.getElementById("resAlcance");
+    const resAltura = document.getElementById("resAltura");
+
+    const paramFields = [
+      {
+        id: "v0",
+        name: "v0",
+        hint: "v0: velocidad inicial con la que se lanza el proyectil."
+      },
+      {
+        id: "theta",
+        name: "θ",
+        hint: "θ: ángulo de lanzamiento medido desde el suelo."
+      },
+      {
+        id: "g",
+        name: "g",
+        hint: "g: aceleración de la gravedad (≈ 9.81 m/s² en la Tierra)."
+      },
+      {
+        id: "k",
+        name: "k",
+        hint: "k: coeficiente de rozamiento con el aire (resistencia)."
+      },
+      {
+        id: "y0",
+        name: "y0",
+        hint: "y0: altura inicial desde la que se lanza el proyectil."
+      }
+    ];
+
+    // --------- FÍSICA ----------
+    function calcularT(v0, thetaDeg, g, k, y0) {
+      const thetaRad = (thetaDeg * Math.PI) / 180.0;
+      const sen = Math.sin(thetaRad);
+      if (Math.abs(sen) < 1e-12) {
+        throw new Error("sin(θ)=0 → el ángulo no puede ser 0° ni 180°.");
+      }
+      const num = v0 * sen;
+      const den = g + k * v0 * sen;
+      if (Math.abs(den) < 1e-12) {
+        throw new Error("g + k·v0·sin(θ) ≈ 0 (ajusta k o θ).");
+      }
+      const inside = 1 + (2 * y0 * (g + k * v0 * sen)) / (v0 * v0 * sen * sen);
+      if (inside < 0) {
+        throw new Error("La raíz queda negativa (parámetros no válidos).");
+      }
+      return (num / den) * (1 + Math.sqrt(inside));
+    }
+
+    function x_t(v0, thetaDeg, k, t) {
+      const thetaRad = (thetaDeg * Math.PI) / 180.0;
+      const cos_ = Math.cos(thetaRad);
+      return v0 * cos_ * t - 0.5 * k * v0 * cos_ * t * t;
+    }
+
+    function y_t(v0, thetaDeg, g, k, y0, t) {
+      const thetaRad = (thetaDeg * Math.PI) / 180.0;
+      const sen = Math.sin(thetaRad);
+      return y0 + v0 * sen * t - 0.5 * g * t * t - 0.5 * k * v0 * sen * t * t;
+    }
+
+    // --------- UTILIDAD ----------
+    function getValue(field) {
+      const el = document.getElementById(field.id);
+      const raw = (el.value || "").toString().replace(",", ".");
+      const val = parseFloat(raw);
+      if (isNaN(val)) {
+        throw new Error("Falta el valor de " + field.name + ".");
+      }
+      return val;
+    }
+
+    function updateResultsText() {
+      resTiempo.textContent = "T = " + T.toFixed(3) + " s (tiempo de vuelo)";
+      resAlcance.textContent = "Alcance ≈ " + alcance.toFixed(3) + " m";
+      resAltura.textContent = "Altura máxima ≈ " + alturaMax.toFixed(3) + " m";
+    }
+
+    function resizeCanvas() {
+      const container = document.getElementById("canvasContainer");
+      const rect = container.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+
+      plotRect = {
+        x: MARGIN,
+        y: MARGIN,
+        width: Math.max(80, canvas.width - 2 * MARGIN),
+        height: Math.max(80, canvas.height - 2 * MARGIN)
+      };
+
+      // Si ya está visible, recalcula
+      if (document.getElementById("simulador").style.display !== "none") {
+        if (curvePoints.length > 0) {
+          simular(false);
+        } else {
+          drawScene(0);
+        }
+      }
+    }
+
+    // --------- SIMULACIÓN ----------
+    function simular(showErrors = true) {
+      errorDiv.textContent = "";
+      curvePoints = [];
+      animT = 0.0;
+      animating = false;
+      T = 0.0;
+      alcance = 0.0;
+      alturaMax = 0.0;
+
+      try {
+        const v0 = getValue(paramFields[0]);
+        const th = getValue(paramFields[1]);
+        const g = getValue(paramFields[2]);
+        const k = getValue(paramFields[3]);
+        const y0 = getValue(paramFields[4]);
+
+        const T_ = calcularT(v0, th, g, k, y0);
+        let n = Math.max(200, Math.floor(80 * T_));
+        if (!plotRect) {
+          plotRect = {
+            x: MARGIN,
+            y: MARGIN,
+            width: Math.max(80, canvas.width - 2 * MARGIN),
+            height: Math.max(80, canvas.height - 2 * MARGIN)
+          };
+        }
+
+        const xs = [];
+        const ys = [];
+        for (let i = 0; i < n; i++) {
+          const t = (T_ * i) / (n - 1);
+          const xx = x_t(v0, th, k, t);
+          const yy = y_t(v0, th, g, k, y0, t);
+          if (yy >= 0) {
+            xs.push(xx);
+            ys.push(yy);
+          }
+        }
+
+        if (xs.length === 0) {
+          throw new Error(
+            "La trayectoria no es válida (no hay puntos por encima del suelo)."
+          );
+        }
+
+        let xMin = Math.min.apply(null, xs);
+        let xMax = Math.max.apply(null, xs);
+        let yMin = Math.min(0, Math.min.apply(null, ys));
+        let yMax = Math.max.apply(null, ys);
+
+        if (Math.abs(xMax - xMin) < 1e-9) xMax = xMin + 1.0;
+        if (Math.abs(yMax - yMin) < 1e-9) yMax = yMin + 1.0;
+
+        curvePoints = xs.map((xm, i) => {
+          const ym = ys[i];
+          const px =
+            plotRect.x + ((xm - xMin) / (xMax - xMin)) * plotRect.width;
+          const py =
+            plotRect.y +
+            plotRect.height -
+            ((ym - yMin) / (yMax - yMin)) * plotRect.height;
+          return { x: px, y: py };
+        });
+
+        T = T_;
+        alcance = x_t(v0, th, k, T);
+        alturaMax = yMax;
+
+        updateResultsText();
+      } catch (err) {
+        if (showErrors) {
+          errorDiv.textContent = "ERROR: " + err.message;
+        }
+        curvePoints = [];
+        T = 0.0;
+        alcance = 0.0;
+        alturaMax = 0.0;
+        updateResultsText();
+      }
+    }
+
+    // --------- DIBUJO ----------
+    function drawAxes() {
+      if (!plotRect) return;
+      const inner = plotRect;
+
+      ctx.fillStyle = "#FAFAFA";
+      ctx.fillRect(
+        inner.x - 20,
+        inner.y - 20,
+        inner.width + 40,
+        inner.height + 40
+      );
+
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(inner.x, inner.y, inner.width, inner.height);
+
+      ctx.strokeStyle = "#E0E0E0";
+      ctx.lineWidth = 1;
+      for (let i = 1; i <= 4; i++) {
+        const gx = inner.x + (i * inner.width) / 5;
+        ctx.beginPath();
+        ctx.moveTo(gx, inner.y);
+        ctx.lineTo(gx, inner.y + inner.height);
+        ctx.stroke();
+
+        const gy = inner.y + (i * inner.height) / 5;
+        ctx.beginPath();
+        ctx.moveTo(inner.x, gy);
+        ctx.lineTo(inner.x + inner.width, gy);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = "#424242";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(inner.x, inner.y + inner.height);
+      ctx.lineTo(inner.x + inner.width, inner.y + inner.height);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(inner.x, inner.y);
+      ctx.lineTo(inner.x, inner.y + inner.height);
+      ctx.stroke();
+
+      ctx.fillStyle = "#000000";
+      ctx.font = "14px system-ui";
+      ctx.fillText("X (m)", inner.x + inner.width - 60, inner.y + inner.height + 26);
+
+      ctx.save();
+      ctx.translate(inner.x - 32, inner.y + 20);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText("Y (m)", 0, 0);
+      ctx.restore();
+    }
+
+    function drawCurve() {
+      if (curvePoints.length < 2) return;
+      ctx.strokeStyle = "#1976D2";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(curvePoints[0].x, curvePoints[0].y);
+      for (let i = 1; i < curvePoints.length; i++) {
+        ctx.lineTo(curvePoints[i].x, curvePoints[i].y);
+      }
+      ctx.stroke();
+    }
+
+    function drawParticle() {
+      if (curvePoints.length < 2) return;
+      const idx = Math.max(
+        0,
+        Math.min(curvePoints.length - 1, Math.floor(animT * (curvePoints.length - 1)))
+      );
+      const p = curvePoints[idx];
+      ctx.fillStyle = "#FB8C00";
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawTitles() {
+      if (!plotRect) return;
+      ctx.fillStyle = "#1565C0";
+      ctx.font = "17px system-ui";
+      ctx.fillText(
+        "Trayectoria del proyectil (Y vs X)",
+        plotRect.x + 10,
+        plotRect.y - 12
+      );
+
+      ctx.fillStyle = "#555555";
+      ctx.font = "12px system-ui";
+      ctx.fillText(
+        "Curva azul: trayectoria   Punto naranja: proyectil animado",
+        plotRect.x + 10,
+        plotRect.y + plotRect.height + 24
+      );
+    }
+
+    function drawScene(timestamp) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawAxes();
+      drawCurve();
+      drawParticle();
+      drawTitles();
+    }
+
+    // --------- LOOP ANIMACIÓN ----------
+    function animationLoop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const dt = (timestamp - lastTime) / 1000.0;
+      lastTime = timestamp;
+
+      if (animating && curvePoints.length > 1) {
+        animT += dt * ANIM_SPEED;
+        if (animT >= 1.0) {
+          animT = 1.0;
+          animating = false;
+        }
+      }
+
+      drawScene(timestamp);
+      requestAnimationFrame(animationLoop);
+    }
+
+    // --------- EVENTOS UI ----------
+    document.getElementById("startBtn").addEventListener("click", () => {
+      document.getElementById("menu").style.display = "none";
+      document.getElementById("simulador").style.display = "flex";
+      resizeCanvas();
+      simular();
+    });
+
+    document.getElementById("btnSimular").addEventListener("click", () => {
+      simular();
+    });
+
+    document.getElementById("btnAnimar").addEventListener("click", () => {
+      if (curvePoints.length > 1) {
+        if (!animating) {
+          animT = 0.0;
+          animating = true;
+        } else {
+          animating = false;
+        }
+      }
+    });
+
+    // Hints accesibles en móvil y desktop
+    paramFields.forEach((field) => {
+      const el = document.getElementById(field.id);
+      const setHint = () => (hintDiv.textContent = field.hint);
+      const resetHint = () =>
+        (hintDiv.textContent =
+          "Consejo: toca o pasa el cursor sobre un campo para ver su explicación.");
+      el.addEventListener("focus", setHint);
+      el.addEventListener("mouseover", setHint);
+      el.addEventListener("blur", resetHint);
+      el.addEventListener("mouseout", resetHint);
+      el.addEventListener("touchstart", () => {
+        setHint();
+      }, { passive: true });
+    });
+
+    window.addEventListener("resize", resizeCanvas);
+    requestAnimationFrame(animationLoop);
+  </script>
+</body>
+</html>
