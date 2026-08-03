@@ -64,18 +64,18 @@ $$T = \frac{v_0 \sin(\theta)}{g + k v_0 \sin(\theta)} \left( 1 + \sqrt{1 + \frac
 ## 🗺️ Diagrama de Flujo del Simulador
 
 ```mermaid
-flowchart TD
+graph TD
     A["Inicio: Menú Principal con Video Fondo"] -->|Click en INICIAR| B["Mostrar Panel de Simulación y Canvas"]
-    B --> C["Ingreso de Parámetros: v0, θ, g, k, y0"]
-    C -->|Click en Simular / Cambiar tamaño| D{"Validación Matemática"}
-    D -- Parámetros Inválidos --> E["Mostrar Mensaje de Error"]
-    D -- Parámetros Válidos --> F["Calcular Tiempo de Vuelo T via calcularT"]
+    B --> C["Ingreso de Parámetros: v0, theta, g, k, y0"]
+    C -->|Click en Simular / Resize| D["Validación Matemática"]
+    D -->|Parámetros Inválidos| E["Mostrar Mensaje de Error"]
+    D -->|Parámetros Válidos| F["Calcular Tiempo de Vuelo T via calcularT"]
     F --> G["Generar Puntos de Trayectoria x_t e y_t"]
     G --> H["Calcular Alcance y Altura Máxima"]
     H --> I["Renderizar Ejes y Curva Azul en Canvas"]
-    I --> J{"¿Usuario pulsa Animar?"}
-    J -- Sí --> K["Bucle requestAnimationFrame: Partícula Naranja en Movimiento"]
-    J -- No --> L["Vista Estática de la Trayectoria"]
+    I --> J["¿Usuario pulsa Animar?"]
+    J -->|Sí| K["Bucle requestAnimationFrame: Partícula Naranja"]
+    J -->|No| L["Vista Estática de la Trayectoria"]
 ```
 
 ---
